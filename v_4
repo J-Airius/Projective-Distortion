@@ -1,0 +1,86 @@
+# Requirement for CoE197-M-ML
+# Removing Projective Distortion on Images
+# Author: Jasper Airius O. Cuya [2019-02407]
+# Short Definition: Undistorting Images using Knowledge on Linear Mapping and Least Squares Estimation
+
+import numpy as np
+import cv2
+
+# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+# Part I: Obtaining Image Data and Coordinates
+# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+# Source Image (Put photo into the folder of code to remove the need to put whole file path)
+Image_source = cv2.imread('red.png')
+Image_copy = Image_source.copy()                                              # Creates Copy of Image for the Markers
+
+# Function to get Position of 4 Corners
+def Position_Data (event, x, y, flags, params):
+    if event == cv2.EVENT_LBUTTONDOWN:
+        cv2.circle(Image_copy, (x, y), 4, (0, 0, 255), -1)                    # Creates Circle Markers for Point
+        Points.append([x, y])
+        if len(Points) < 4:
+            cv2.imshow('Distorted Image', Image_copy)
+        if len(Points) == 4:
+            cv2.destroyAllWindows()                                           # Closes Image Window after 4 points
+Points = []                                                                   # Points are appended to this vector
+
+# Calling the Function "Position Data"
+cv2.imshow('Distorted Image', Image_copy)                                     # Displays Image Window
+cv2.setMouseCallback('Distorted Image', Position_Data)
+cv2.waitKey(0)                                                                # Added so that the Window will stay open indefinitely or until 4 points
+
+# Arranging Points Counterclockwise (With Point 1 near Origin)
+s = np.sum(Points, axis=1)
+pt_1 = Points[np.argmin(s)]                                                   # Lowest Sum (Closest to Origin)
+pt_3 = Points[np.argmax(s)]                                                   # Largest Sum (Farthest to Origin)
+
+diff = np.diff(Points, axis=1)
+pt_2 = Points[np.argmax(diff)]                                                # Bottom Left Point
+pt_4 = Points[np.argmin(diff)]                                                # Up Right Point
+
+# Measurements of Length and Width of Object
+width_14 = np.sqrt(((pt_1[0] - pt_4[0])**2)+((pt_1[1] - pt_4[1])**2))
+width_23 = np.sqrt(((pt_2[0] - pt_3[0])**2)+((pt_2[1] - pt_3[1])**2))
+width = np.minimum(int(width_14),int(width_23))                               # Minimum Width
+height_12 = np.sqrt(((pt_1[0] - pt_2[0])**2)+((pt_1[1] - pt_2[1])**2))
+height_34 = np.sqrt(((pt_3[0] - pt_4[0])**2)+((pt_3[1] - pt_4[1])**2))
+height = np.minimum(int(height_12),int(height_34))                            # Minimum Height
+
+# Corners of Undistorted Image
+pt_1p = [0,0]                                                                 # Up Left Corner
+pt_2p = [0, height - 1]                                                       # Bottom Left Corner
+pt_3p = [width - 1, height - 1]                                               # Bottom Right Corner
+pt_4p = [width - 1, 0]                                                        # Up Right Corner
+
+# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+# Part II: Linear Mapping and Least Squares Estimation for Hoomography Matrix
+# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+# Linear Equations in Matrix Form
+A_1 = np.array([[-(pt_1p[0]),-(pt_1p[1]),-1,0,0,0,((pt_1p[0])*(pt_1[0])),((pt_1p[1])*(pt_1[0])),(pt_1[0])],[0,0,0,-(pt_1p[0]),-(pt_1p[1]),-1,((pt_1p[0])*(pt_1[1])),((pt_1p[1])*(pt_1[1])),(pt_1[1])]])
+A_2 = np.array([[-(pt_2p[0]),-(pt_2p[1]),-1,0,0,0,((pt_2p[0])*(pt_2[0])),((pt_2p[1])*(pt_2[0])),(pt_2[0])],[0,0,0,-(pt_2p[0]),-(pt_2p[1]),-1,((pt_2p[0])*(pt_2[1])),((pt_2p[1])*(pt_2[1])),(pt_2[1])]])
+A_3 = np.array([[-(pt_3p[0]),-(pt_3p[1]),-1,0,0,0,((pt_3p[0])*(pt_3[0])),((pt_3p[1])*(pt_3[0])),(pt_3[0])],[0,0,0,-(pt_3p[0]),-(pt_3p[1]),-1,((pt_3p[0])*(pt_3[1])),((pt_3p[1])*(pt_3[1])),(pt_3[1])]])
+A_4 = np.array([[-(pt_4p[0]),-(pt_4p[1]),-1,0,0,0,((pt_4p[0])*(pt_4[0])),((pt_4p[1])*(pt_4[0])),(pt_4[0])],[0,0,0,-(pt_4p[0]),-(pt_4p[1]),-1,((pt_4p[0])*(pt_4[1])),((pt_4p[1])*(pt_4[1])),(pt_4[1])]])
+A = np.vstack((A_1,A_2,A_3,A_4))
+
+# SVD Decomposition of A-Array
+U, s, VT = np.linalg.svd(A)
+
+# Getting Eigenvector from (A^T)(A)
+Eigen_rows = np.shape(VT)[0]
+V = VT[Eigen_rows - 1,:]
+
+# Reshaping Array to a 3x3 Homography Matrix
+H = V.reshape(3,3)
+
+# Multiplicative Inverse of Homography Matrix
+H_inv = np.linalg.inv(H)
+
+# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+# Part III: Applying Inverse Homography Matrix to Original Coordinates
+# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+perspective_img = cv2.warpPerspective(Image_source, H_inv, (width,height)) # Use Image, not Image_copy
+cv2.imshow('Undistorted Image', perspective_img)
+cv2.waitKey(0)
