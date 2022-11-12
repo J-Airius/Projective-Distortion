@@ -11,7 +11,7 @@ import cv2
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 # Source Image (Put photo into the folder of code to remove the need to put whole file path)
-Image_source = cv2.imread('red.png')
+Image_source = cv2.imread('text.jpg')
 Image_copy = Image_source.copy()                                              # Creates Copy of Image for the Markers
 
 # Function to get Position of 4 Corners
@@ -96,7 +96,7 @@ for x in range(width):
         if x_source < 0 or y_source < 0:
             continue
         else:
-            (B,G,R) = Image_source[x_source,y_source]
+            (B,G,R) = Image_source[y_source,x_source]
             Final[y,x] = [B,G,R]
 
 cv2.imshow('Undistorted Image', Final)
