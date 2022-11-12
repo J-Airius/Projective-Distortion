@@ -1,0 +1,56 @@
+# Requirement for CoE197-M-ML
+# Removing Projective Distortion on Images
+# Author: Jasper Airius O. Cuya [2019-02407]
+
+import numpy as np
+
+# Process on directly acquiring points from the photo using matplotlib or cv2
+# Work in Progress
+
+# Sample points in Source Image(Counter-clockwise)
+pt_1 = [761,221]
+pt_2 = [317,1303]
+pt_3 = [1489,1555]
+pt_4 = [1543,303]
+
+# Measurements of Length and Width of Object
+width_14 = np.sqrt(((pt_1[0] - pt_4[0])**2)+((pt_1[1] - pt_4[1])**2))
+width_23 = np.sqrt(((pt_2[0] - pt_3[0])**2)+((pt_2[1] - pt_3[1])**2))
+width = np.minimum(int(width_14),int(width_23))                               # Minimum Width
+height_12 = np.sqrt(((pt_1[0] - pt_2[0])**2)+((pt_1[1] - pt_2[1])**2))
+height_34 = np.sqrt(((pt_3[0] - pt_4[0])**2)+((pt_3[1] - pt_4[1])**2))
+height = np.minimum(int(height_12),int(height_34))                            # Minimum Height
+
+# Sample points in Final Image
+pt_1p = [0,0]
+pt_2p = [0, height - 1]
+pt_3p = [width - 1, height - 1]
+pt_4p = [width - 1, 0]
+
+# Linear Equations in Matrix Form
+# Work in Progress (Would work better with a for loop)
+A_1 = np.array([[-(pt_1p[0]),-(pt_1p[1]),-1,0,0,0,((pt_1p[0])*(pt_1[0])),((pt_1p[1])*(pt_1[0])),(pt_1[0])],[0,0,0,-(pt_1p[0]),-(pt_1p[1]),-1,((pt_1p[0])*(pt_1[1])),((pt_1p[1])*(pt_1[1])),(pt_1[1])]])
+A_2 = np.array([[-(pt_2p[0]),-(pt_2p[1]),-1,0,0,0,((pt_2p[0])*(pt_2[0])),((pt_2p[1])*(pt_2[0])),(pt_2[0])],[0,0,0,-(pt_2p[0]),-(pt_2p[1]),-1,((pt_2p[0])*(pt_2[1])),((pt_2p[1])*(pt_2[1])),(pt_2[1])]])
+A_3 = np.array([[-(pt_3p[0]),-(pt_3p[1]),-1,0,0,0,((pt_3p[0])*(pt_3[0])),((pt_3p[1])*(pt_3[0])),(pt_3[0])],[0,0,0,-(pt_3p[0]),-(pt_3p[1]),-1,((pt_3p[0])*(pt_3[1])),((pt_3p[1])*(pt_3[1])),(pt_3[1])]])
+A_4 = np.array([[-(pt_4p[0]),-(pt_4p[1]),-1,0,0,0,((pt_4p[0])*(pt_4[0])),((pt_4p[1])*(pt_4[0])),(pt_4[0])],[0,0,0,-(pt_4p[0]),-(pt_4p[1]),-1,((pt_4p[0])*(pt_4[1])),((pt_4p[1])*(pt_4[1])),(pt_4[1])]])
+A = np.vstack((A_1,A_2,A_3,A_4))
+
+# SVD Decomposition of A-Array
+# Unsure if this is allowed
+U, s, VT = np.linalg.svd(A)
+
+# Storing Smallest Eigenvalue and its Index
+# Still not sure if this is needed, smallest value seems already at the rightmost
+# Why only 8 elements?
+min_pos = np.where(s == np.amin(s))
+
+# Storing Eigenvector Column of Smallest Eigenvalue
+V = np.transpose(VT)
+V_h = V[:,min_pos[0]]
+
+# Reshaping Array to a 3x3 Homography Matrix
+H = V_h.reshape(3,3)
+print (H)
+
+# Notes: SVD, not sure because s is automatically sorted.
+# Gonna make a V2 that will automatically just get the last column of V.
